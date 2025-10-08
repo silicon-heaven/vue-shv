@@ -179,13 +179,11 @@ export function useShv(options: VueShvOptions) {
 
                 for (const workflow of workflows) {
                     const parsedWorkflow = OAuth2AzureWorkflowZod.safeParse(workflow);
-                    if (!parsedWorkflow.success) {
-                        continue;
+                    if (parsedWorkflow.success) {
+                        shvSessionStorage.value.azureWorkflow = parsedWorkflow.data;
+                        globalThis.location.replace(makePkce({...parsedWorkflow.data, azureCodeRedirect}).authorizeUrl());
+                        return;
                     }
-
-                    shvSessionStorage.value.azureWorkflow = parsedWorkflow.data;
-
-                    globalThis.location.replace(makePkce({...parsedWorkflow.data, azureCodeRedirect}).authorizeUrl());
                 }
 
                 noBrokerSupport();
