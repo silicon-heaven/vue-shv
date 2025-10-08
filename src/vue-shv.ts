@@ -2,13 +2,13 @@ import {computed, ComputedRef, onWatcherCleanup, Ref, ref, watchEffect} from 'vu
 import {type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
 import PKCE from 'js-pkce';
-import * as z from 'libshv-js/zod';
+import * as z from 'libshv-js-zod/zod';
 // @ts-expect-error - shvMapType is indirectly used by Zod, it's needed for exporting
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import {type shvMapType} from 'libshv-js/rpcvalue';
 import {RpcValue} from 'libshv-js/rpcvalue';
 import {resolveString, StringGetter} from 'libshv-js/utils';
-import {createZodWsClient, ZodMethodHandler} from 'libshv-js/zod-ws-client';
+import {createZodWsClient, ZodMethodHandler} from 'libshv-js-zod';
 
 type GlobalResourceOptions<ResourceType> = {
     shvPath: StringGetter;
