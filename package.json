@@ -32,7 +32,8 @@
   },
   "peerDependencies": {
     "vue": "^3.5.22",
-    "libshv-js-zod": "^2.0.1"
+    "libshv-js-zod": "^2.0.1",
+    "libshv-js": "^5.0.1"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.46.1",
