@@ -1,6 +1,6 @@
 {
   "name": "vue-shv",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "description": "Vue support for libshv-js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,8 +32,8 @@
   },
   "peerDependencies": {
     "vue": "^3.5.22",
-    "libshv-js-zod": "^2.0.1",
-    "libshv-js": "^5.0.1"
+    "libshv-js-zod": "^3.0.0",
+    "libshv-js": "^6.0.0"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.46.1",
