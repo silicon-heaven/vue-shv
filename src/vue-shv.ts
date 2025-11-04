@@ -1,5 +1,5 @@
 import {computed, ComputedRef, onWatcherCleanup, Ref, ref, watchEffect} from 'vue';
-import {type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
+import {CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
 import PKCE from 'js-pkce';
 import * as z from 'libshv-js-zod/zod';
@@ -200,13 +200,13 @@ export function useShv(options: VueShvOptions) {
         shvSessionStorage.value.shvLoginPassword = password;
     };
 
-    const rpcCall = async (shvPath: StringGetter, method: string, params?: RpcValue) => {
+    const rpcCall = async (shvPath: StringGetter, method: string, params?: RpcValue, options?: CallRpcMethodOptions) => {
         const shv = await getConnection();
-        return shv.callRpcMethod(await resolveString(shvPath), method, params);
+        return shv.callRpcMethod(await resolveString(shvPath), method, params, options);
     };
 
-    const makeRpcCall = <ResultType>(shvPath: StringGetter, method: string, validator: z.ZodType<ResultType>) => async () => {
-        const resultOrError = await rpcCall(await resolveString(shvPath), method);
+    const makeRpcCall = <ResultType>(shvPath: StringGetter, method: string, validator: z.ZodType<ResultType>, options?: CallRpcMethodOptions) => async () => {
+        const resultOrError = await rpcCall(await resolveString(shvPath), method, undefined, options);
         if (resultOrError instanceof Error) {
             return resultOrError;
         }
@@ -219,8 +219,9 @@ export function useShv(options: VueShvOptions) {
         return parsed.data;
     };
 
-    const makeRpcCallParam = <ResultType, ParamType extends RpcValue>(shvPath: StringGetter, method: string, _paramType: z.ZodType<ParamType>, validator: z.ZodType<ResultType>) => async (param: ParamType) => {
-        const resultOrError = await rpcCall(await resolveString(shvPath), method, param);
+    // eslint-disable-next-line max-params -- five is fine, this function does not get called a lot and I don't want to change everything to a config object
+    const makeRpcCallParam = <ResultType, ParamType extends RpcValue>(shvPath: StringGetter, method: string, _paramType: z.ZodType<ParamType>, validator: z.ZodType<ResultType>, options?: CallRpcMethodOptions) => async (param: ParamType) => {
+        const resultOrError = await rpcCall(await resolveString(shvPath), method, param, options);
         if (resultOrError instanceof Error) {
             return resultOrError;
         }
