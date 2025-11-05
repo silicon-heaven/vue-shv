@@ -16,6 +16,7 @@ type GlobalResourceOptions<ResourceType> = {
     validator: z.ZodType<ResourceType>;
     signalName: string;
     signalHandler: (param: RpcValue, resource: Ref<ResourceType | undefined>, reinit: () => void) => void;
+    callRpcMethodOptions: CallRpcMethodOptions,
 };
 
 type VueShvOptions = {
@@ -376,7 +377,7 @@ export function useShv(options: VueShvOptions) {
     function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => ComputedRef<ResourceType> | Ref<ResourceType | undefined> {
         const resource = ref<ResourceType>();
 
-        const resourceCall = makeRpcCall<ResourceType>(options.shvPath, options.method, options.validator);
+        const resourceCall = makeRpcCall<ResourceType>(options.shvPath, options.method, options.validator, options.callRpcMethodOptions);
         const refreshValue = async () => {
             const newResource = await resourceCall();
             if (newResource instanceof Error) {
