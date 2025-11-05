@@ -9,6 +9,7 @@ import {type shvMapType} from 'libshv-js/rpcvalue';
 import {RpcValue} from 'libshv-js/rpcvalue';
 import {resolveString, StringGetter} from 'libshv-js/utils';
 import {createZodWsClient, ZodMethodHandler} from 'libshv-js-zod';
+import {ShvRI} from 'libshv-js';
 
 type GlobalResourceOptions<ResourceType> = {
     shvPath: StringGetter;
@@ -393,7 +394,7 @@ export function useShv(options: VueShvOptions) {
             try {
                 await refreshValue();
                 const connection = await getConnection();
-                await connection.subscribe(`Global-${resIdentifier}:`, shvPath, options.signalName, (_path: string, _method: string, param: RpcValue) => {
+                await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', options.signalName), (_path: string, _method: string, param: RpcValue) => {
                     options.signalHandler(param, resource, async () => refreshValue().catch((error: unknown) => {
                         console.error(`Failed to initialize ${resIdentifier}`, error);
                     }));
