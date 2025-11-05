@@ -16,7 +16,7 @@ type GlobalResourceOptions<ResourceType> = {
     validator: z.ZodType<ResourceType>;
     signalName: string;
     signalHandler: (param: RpcValue, resource: Ref<ResourceType | undefined>, reinit: () => void) => void;
-    callRpcMethodOptions: CallRpcMethodOptions,
+    callRpcMethodOptions?: CallRpcMethodOptions,
 };
 
 type VueShvOptions = {
