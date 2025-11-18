@@ -1,4 +1,4 @@
-import {computed, ComputedRef, onWatcherCleanup, Ref, ref, watchEffect} from 'vue';
+import {computed, ComputedRef, Ref, ref, watchEffect} from 'vue';
 import {CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
 import PKCE from 'js-pkce';
@@ -97,6 +97,10 @@ export function useShv(options: VueShvOptions) {
         resolve: (value: WsClient) => void;
         reject: () => void;
     }> = [];
+
+    const globalResources: Record<string, {
+        reset: () => void;
+    }> = {};
 
     const resetAzureToken = () => {
         shvLocalStorage.value.azureAccessToken = undefined;
@@ -247,6 +251,11 @@ export function useShv(options: VueShvOptions) {
             waiter.reject();
         }
 
+        for (const [globalResourceKey, globalResource] of Object.entries(globalResources)) {
+            globalResource.reset();
+            delete globalResources[globalResourceKey];
+        }
+
         connected.value = 'disconnected';
         waitingForSocket.length = 0;
         state.ws?.close();
@@ -393,6 +402,13 @@ export function useShv(options: VueShvOptions) {
             const resIdentifier = `${shvPath}:${options.method}`;
             try {
                 await refreshValue();
+                globalResources[resIdentifier] = {
+                    reset() {
+                        initialized = false;
+                        resource.value = undefined;
+                    },
+                };
+
                 const connection = await getConnection();
                 await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', options.signalName), (_path: string, _method: string, param: RpcValue) => {
                     options.signalHandler(param, resource, async () => refreshValue().catch((error: unknown) => {
@@ -410,11 +426,6 @@ export function useShv(options: VueShvOptions) {
             if (!initialized) {
                 initialized = true;
                 watchEffect(async () => {
-                    onWatcherCleanup(() => {
-                        initialized = false;
-                        resource.value = undefined;
-                    });
-
                     if (connected.value !== 'connected') {
                         return;
                     }
