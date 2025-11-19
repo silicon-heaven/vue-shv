@@ -382,12 +382,18 @@ export function useShv(options: VueShvOptions) {
         });
     };
 
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType>): () => Ref<ResourceType | undefined>;
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => ComputedRef<ResourceType>;
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => ComputedRef<ResourceType> | Ref<ResourceType | undefined> {
+    type Loading = {
+        loading: ComputedRef<boolean>;
+    };
+
+    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType>): () => {res: ComputedRef<ResourceType | undefined>} & Loading;
+    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => {res: ComputedRef<ResourceType>} & Loading;
+    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => {res: ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined>} & Loading {
         const resource = ref<ResourceType>();
 
         const resourceCall = makeRpcCall<ResourceType>(options.shvPath, options.method, options.validator, options.callRpcMethodOptions);
+
+        const loading = ref(false);
         const refreshValue = async () => {
             const newResource = await resourceCall();
             if (newResource instanceof Error) {
@@ -405,6 +411,7 @@ export function useShv(options: VueShvOptions) {
                 globalResources[resIdentifier] = {
                     reset() {
                         initialized = false;
+                        loading.value = false;
                         resource.value = undefined;
                     },
                 };
@@ -425,6 +432,7 @@ export function useShv(options: VueShvOptions) {
         return () => {
             if (!initialized) {
                 initialized = true;
+                loading.value = true;
                 watchEffect(async () => {
                     if (connected.value !== 'connected') {
                         return;
@@ -432,12 +440,14 @@ export function useShv(options: VueShvOptions) {
 
                     const shvPath = await resolveString(options.shvPath);
                     const resIdentifier = `${shvPath}:${options.method}`;
-                    initialize().catch((error: unknown) => {
+                    await initialize().catch((error: unknown) => {
                         console.error(`Failed to initialize ${resIdentifier}`, error);
                     });
+                    loading.value = false;
                 });
             }
 
+            let res;
             if ('default' in options) {
                 const defaultValue = options.default;
                 const withDefault = computed(() => {
@@ -447,10 +457,15 @@ export function useShv(options: VueShvOptions) {
 
                     return resource.value;
                 });
-                return withDefault;
+                res = withDefault;
+            } else {
+                res = computed(() => resource.value);
             }
 
-            return resource;
+            return {
+                res,
+                loading: computed(() => loading.value),
+            };
         };
     }
 
