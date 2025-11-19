@@ -382,9 +382,9 @@ export function useShv(options: VueShvOptions) {
         });
     };
 
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType>): () => Ref<ResourceType | undefined>;
+    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType>): () => ComputedRef<ResourceType | undefined>;
     function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => ComputedRef<ResourceType>;
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => ComputedRef<ResourceType> | Ref<ResourceType | undefined> {
+    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined> {
         const resource = ref<ResourceType>();
 
         const resourceCall = makeRpcCall<ResourceType>(options.shvPath, options.method, options.validator, options.callRpcMethodOptions);
@@ -450,7 +450,7 @@ export function useShv(options: VueShvOptions) {
                 return withDefault;
             }
 
-            return resource;
+            return computed(() => resource.value);
         };
     }
 
