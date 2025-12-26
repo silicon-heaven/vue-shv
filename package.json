@@ -1,6 +1,6 @@
 {
   "name": "vue-shv",
-  "version": "8.0.1",
+  "version": "8.0.2",
   "description": "Vue support for libshv-js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
