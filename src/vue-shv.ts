@@ -397,6 +397,9 @@ export function useShv(options: VueShvOptions) {
         const refreshValue = async () => {
             const newResource = await resourceCall();
             if (newResource instanceof Error) {
+                const shvPath = await resolveString(options.shvPath);
+                const resIdentifier = `${shvPath}:${options.method}`;
+                console.error(`Failed to parse new data for resource: ${resIdentifier}:`, newResource);
                 return;
             }
 
