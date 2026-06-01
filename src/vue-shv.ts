@@ -1,14 +1,13 @@
-import {computed, ComputedRef, Ref, ref, watchEffect} from 'vue';
-import {CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
+import {computed, type ComputedRef, type Ref, ref, watchEffect} from 'vue';
+import {type CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
 import PKCE from 'js-pkce';
 import * as z from 'libshv-js-zod/zod';
 // @ts-expect-error - shvMapType is indirectly used by Zod, it's needed for exporting
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {type shvMapType} from 'libshv-js/rpcvalue';
-import {RpcValue} from 'libshv-js/rpcvalue';
-import {resolveString, StringGetter} from 'libshv-js/utils';
-import {createZodWsClient, ZodMethodHandler} from 'libshv-js-zod';
+import {type shvMapType, type RpcValue} from 'libshv-js/rpcvalue';
+import {resolveString, type StringGetter} from 'libshv-js/utils';
+import {createZodWsClient, type ZodMethodHandler} from 'libshv-js-zod';
 import {ShvRI} from 'libshv-js';
 
 type GlobalResourceOptions<ResourceType> = {
@@ -17,7 +16,7 @@ type GlobalResourceOptions<ResourceType> = {
     validator: z.ZodType<ResourceType>;
     signalName: string;
     signalHandler: (param: RpcValue, resource: Ref<ResourceType | undefined>, reinit: () => void) => void;
-    callRpcMethodOptions?: CallRpcMethodOptions,
+    callRpcMethodOptions?: CallRpcMethodOptions;
 };
 
 type VueShvOptions = {
@@ -60,7 +59,7 @@ type LoginFailure = {
     message?: string;
 };
 
-const makePkce = (oauthOptions: {azureCodeRedirect: string, clientId: string; authorizeUrl: string; tokenUrl: string; scopes: string | string[]}) => {
+const makePkce = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string; scopes: string | string[]}) => {
     const pkce = new PKCE({
         client_id: oauthOptions.clientId,
         redirect_uri: (() => {
@@ -206,13 +205,13 @@ export function useShv(options: VueShvOptions) {
         shvSessionStorage.value.shvLoginPassword = password;
     };
 
-    const rpcCall = async (shvPath: StringGetter, method: string, params?: RpcValue, options?: CallRpcMethodOptions) => {
+    const rpcCall = async (shvPath: StringGetter, method: string, params?: RpcValue, rpcCallOptions?: CallRpcMethodOptions) => {
         const shv = await getConnection();
-        return shv.callRpcMethod(await resolveString(shvPath), method, params, options);
+        return shv.callRpcMethod(await resolveString(shvPath), method, params, rpcCallOptions);
     };
 
-    const makeRpcCall = <ResultType>(shvPath: StringGetter, method: string, validator: z.ZodType<ResultType>, options?: CallRpcMethodOptions) => async () => {
-        const resultOrError = await rpcCall(await resolveString(shvPath), method, undefined, options);
+    const makeRpcCall = <ResultType>(shvPath: StringGetter, method: string, validator: z.ZodType<ResultType>, rpcCallOptions?: CallRpcMethodOptions) => async () => {
+        const resultOrError = await rpcCall(await resolveString(shvPath), method, undefined, rpcCallOptions);
         if (resultOrError instanceof Error) {
             return resultOrError;
         }
@@ -226,8 +225,8 @@ export function useShv(options: VueShvOptions) {
     };
 
     // eslint-disable-next-line max-params -- five is fine, this function does not get called a lot and I don't want to change everything to a config object
-    const makeRpcCallParam = <ResultType, ParamType extends RpcValue>(shvPath: StringGetter, method: string, _paramType: z.ZodType<ParamType>, validator: z.ZodType<ResultType>, options?: CallRpcMethodOptions) => async (param: ParamType) => {
-        const resultOrError = await rpcCall(await resolveString(shvPath), method, param, options);
+    const makeRpcCallParam = <ResultType, ParamType extends RpcValue>(shvPath: StringGetter, method: string, _paramType: z.ZodType<ParamType>, validator: z.ZodType<ResultType>, rpcCallOptions?: CallRpcMethodOptions) => async (param: ParamType) => {
+        const resultOrError = await rpcCall(await resolveString(shvPath), method, param, rpcCallOptions);
         if (resultOrError instanceof Error) {
             return resultOrError;
         }
@@ -253,6 +252,7 @@ export function useShv(options: VueShvOptions) {
 
         for (const [globalResourceKey, globalResource] of Object.entries(globalResources)) {
             globalResource.reset();
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete globalResources[globalResourceKey];
         }
 
@@ -386,19 +386,19 @@ export function useShv(options: VueShvOptions) {
         loading: ComputedRef<boolean>;
     };
 
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType>): () => {res: ComputedRef<ResourceType | undefined>} & Loading;
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => {res: ComputedRef<ResourceType>} & Loading;
-    function makeGlobalResource<ResourceType>(options: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => {res: ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined>} & Loading {
+    function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType>): () => {res: ComputedRef<ResourceType | undefined>} & Loading;
+    function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => {res: ComputedRef<ResourceType>} & Loading;
+    function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => {res: ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined>} & Loading {
         const resource = ref<ResourceType>();
 
-        const resourceCall = makeRpcCall<ResourceType>(options.shvPath, options.method, options.validator, options.callRpcMethodOptions);
+        const resourceCall = makeRpcCall<ResourceType>(resourceOptions.shvPath, resourceOptions.method, resourceOptions.validator, resourceOptions.callRpcMethodOptions);
 
         const loading = ref(false);
         const refreshValue = async () => {
             const newResource = await resourceCall();
             if (newResource instanceof Error) {
-                const shvPath = await resolveString(options.shvPath);
-                const resIdentifier = `${shvPath}:${options.method}`;
+                const shvPath = await resolveString(resourceOptions.shvPath);
+                const resIdentifier = `${shvPath}:${resourceOptions.method}`;
                 console.error(`Failed to parse new data for resource: ${resIdentifier}:`, newResource);
                 return;
             }
@@ -407,8 +407,8 @@ export function useShv(options: VueShvOptions) {
         };
 
         const initialize = async () => {
-            const shvPath = await resolveString(options.shvPath);
-            const resIdentifier = `${shvPath}:${options.method}`;
+            const shvPath = await resolveString(resourceOptions.shvPath);
+            const resIdentifier = `${shvPath}:${resourceOptions.method}`;
             try {
                 await refreshValue();
                 globalResources[resIdentifier] = {
@@ -420,10 +420,12 @@ export function useShv(options: VueShvOptions) {
                 };
 
                 const connection = await getConnection();
-                await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', options.signalName), (_path: string, _method: string, param: RpcValue) => {
-                    options.signalHandler(param, resource, async () => refreshValue().catch((error: unknown) => {
-                        console.error(`Failed to initialize ${resIdentifier}`, error);
-                    }));
+                await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', resourceOptions.signalName), (_path: string, _method: string, param: RpcValue) => {
+                    resourceOptions.signalHandler(param, resource, () => {
+                        refreshValue().catch((error: unknown) => {
+                            console.error(`Failed to initialize ${resIdentifier}`, error);
+                        });
+                    });
                 });
             } catch (error) {
                 console.error(`Failed to initialize ${resIdentifier}`, error);
@@ -436,13 +438,14 @@ export function useShv(options: VueShvOptions) {
             if (!initialized) {
                 initialized = true;
                 loading.value = true;
+                // eslint-disable-next-line @typescript-eslint/strict-void-return
                 watchEffect(async () => {
                     if (connected.value !== 'connected') {
                         return;
                     }
 
-                    const shvPath = await resolveString(options.shvPath);
-                    const resIdentifier = `${shvPath}:${options.method}`;
+                    const shvPath = await resolveString(resourceOptions.shvPath);
+                    const resIdentifier = `${shvPath}:${resourceOptions.method}`;
                     await initialize().catch((error: unknown) => {
                         console.error(`Failed to initialize ${resIdentifier}`, error);
                     });
@@ -451,8 +454,8 @@ export function useShv(options: VueShvOptions) {
             }
 
             let res;
-            if ('default' in options) {
-                const defaultValue = options.default;
+            if ('default' in resourceOptions) {
+                const defaultValue = resourceOptions.default;
                 const withDefault = computed(() => {
                     if (resource.value === undefined) {
                         return defaultValue;
