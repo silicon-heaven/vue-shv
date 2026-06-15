@@ -1,6 +1,6 @@
 {
   "name": "vue-shv",
-  "version": "8.0.11",
+  "version": "8.0.12",
   "description": "Vue support for libshv-js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -41,7 +41,7 @@
     "eslint": "^10.0.2",
     "eslint-config-xo": "^0.52.0",
     "eslint-formatter-unix": "^9.0.1",
-    "eslint-plugin-unicorn": "^65.0.0",
+    "eslint-plugin-unicorn": "^66.0.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.56.1"
   }
