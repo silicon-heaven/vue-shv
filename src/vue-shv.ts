@@ -43,6 +43,7 @@ const OAuth2AzureWorkflowZod = z.map({
     authorizeUrl: z.string(),
     tokenUrl: z.string(),
     clientId: z.string(),
+    // eslint-disable-next-line unicorn/max-nested-calls
     scopes: z.string().or(z.array(z.string())),
 });
 
@@ -66,7 +67,7 @@ const makePkce = (oauthOptions: {azureCodeRedirect: string; clientId: string; au
             const url = new URL(globalThis.location.href);
             url.pathname = oauthOptions.azureCodeRedirect;
             url.search = '';
-            return url.toString();
+            return url.href;
         })(),
         authorization_endpoint: oauthOptions.authorizeUrl,
         token_endpoint: oauthOptions.tokenUrl,
@@ -199,9 +200,9 @@ export function useShv(options: VueShvOptions) {
         });
     };
 
-    const setShvCredentials = (userName: string, password: string) => {
+    const setShvCredentials = (username: string, password: string) => {
         shvLogout();
-        shvSessionStorage.value.shvLoginUser = userName;
+        shvSessionStorage.value.shvLoginUser = username;
         shvSessionStorage.value.shvLoginPassword = password;
     };
 
@@ -327,7 +328,7 @@ export function useShv(options: VueShvOptions) {
                         const RECONNECT_INTERVAL = 3000;
                         if (shvLocalStorage.value.azureAccessToken !== undefined) {
                             console.log('Disconnected from', wsUri, 'reconnecting in', RECONNECT_INTERVAL, 'ms');
-                            state.reconnectService = globalThis.setTimeout(async () => {
+                            state.reconnectService = setTimeout(async () => {
                                 await getConnection();
                             }, RECONNECT_INTERVAL);
                         }
@@ -340,7 +341,7 @@ export function useShv(options: VueShvOptions) {
             const shvPassword = shvSessionStorage.value.shvLoginPassword;
             if (shvUser !== undefined && shvPassword !== undefined) {
                 displayName.value = shvUser;
-                displayShortName.value = shvUser[0];
+                displayShortName.value = shvUser.at(0) ?? '';
                 displayFullName.value = shvUser;
                 doConnect(shvUser, shvPassword, 'PLAIN')
                     .catch((error: unknown) => {
@@ -386,8 +387,11 @@ export function useShv(options: VueShvOptions) {
         loading: ComputedRef<boolean>;
     };
 
+    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType>): () => {res: ComputedRef<ResourceType | undefined>} & Loading;
+    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => {res: ComputedRef<ResourceType>} & Loading;
+    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => {res: ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined>} & Loading {
         const resource = ref<ResourceType>();
 
