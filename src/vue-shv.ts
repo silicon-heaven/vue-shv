@@ -387,11 +387,8 @@ export function useShv(options: VueShvOptions) {
         loading: ComputedRef<boolean>;
     };
 
-    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType>): () => {res: ComputedRef<ResourceType | undefined>} & Loading;
-    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default: ResourceType}): () => {res: ComputedRef<ResourceType>} & Loading;
-    // eslint-disable-next-line unicorn/prefer-type-literal-last
     function makeGlobalResource<ResourceType>(resourceOptions: GlobalResourceOptions<ResourceType> & {default?: ResourceType}): () => {res: ComputedRef<ResourceType> | ComputedRef<ResourceType | undefined>} & Loading {
         const resource = ref<ResourceType>();
 
