@@ -61,7 +61,8 @@ type LoginFailure = {
 };
 
 const makePkce = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string; scopes: string | string[]}) => {
-    const pkce = new PKCE({
+    // eslint-disable-next-line new-cap -- not sure why I need to use .default here, but eslint complains
+    const pkce = new PKCE.default({
         client_id: oauthOptions.clientId,
         redirect_uri: (() => {
             const url = new URL(globalThis.location.href);
