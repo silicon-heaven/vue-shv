@@ -61,7 +61,7 @@ type LoginFailure = {
 };
 
 const makePkce = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string; scopes: string | string[]}) => {
-    const pkce = new PKCE({
+    const pkce = new PKCE.default({
         client_id: oauthOptions.clientId,
         redirect_uri: (() => {
             const url = new URL(globalThis.location.href);

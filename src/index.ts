@@ -1,1 +1,1 @@
-export * from './vue-shv';
+export * from './vue-shv.js';
