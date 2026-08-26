@@ -1,7 +1,7 @@
 import {computed, type ComputedRef, type Ref, ref, watchEffect} from 'vue';
 import {type CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
-import PKCE from 'js-pkce';
+import {generateCodeVerifier, OAuth2Client} from '@badgateway/oauth2-client';
 import * as z from 'libshv-js-zod/zod';
 // @ts-expect-error - shvMapType is indirectly used by Zod, it's needed for exporting
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -36,6 +36,8 @@ type ShvSessionStorage = {
     shvLoginPassword?: string;
 
     azureWorkflow?: z.infer<typeof OAuth2AzureWorkflowZod>;
+    azureCodeVerifier?: string;
+    azureState?: string;
 };
 
 const OAuth2AzureWorkflowZod = z.map({
@@ -60,24 +62,23 @@ type LoginFailure = {
     message?: string;
 };
 
-const makePkce = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string; scopes: string | string[]}) => {
-    // eslint-disable-next-line new-cap -- not sure why I need to use .default here, but eslint complains
-    const pkce = new PKCE.default({
-        client_id: oauthOptions.clientId,
-        redirect_uri: (() => {
-            const url = new URL(globalThis.location.href);
-            url.pathname = oauthOptions.azureCodeRedirect;
-            url.search = '';
-            return url.href;
-        })(),
-        authorization_endpoint: oauthOptions.authorizeUrl,
-        token_endpoint: oauthOptions.tokenUrl,
-        requested_scopes: Array.isArray(oauthOptions.scopes) ? oauthOptions.scopes.join(' ') : oauthOptions.scopes,
-    });
-    return pkce;
-};
+const makeOAuthClient = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string}) => {
+    const redirectUri = (() => {
+        const url = new URL(globalThis.location.href);
+        url.pathname = oauthOptions.azureCodeRedirect;
+        url.search = '';
+        return url.href;
+    })();
 
-export {makePkce as azure};
+    return {
+        client: new OAuth2Client({
+            clientId: oauthOptions.clientId,
+            authorizationEndpoint: oauthOptions.authorizeUrl,
+            tokenEndpoint: oauthOptions.tokenUrl,
+        }),
+        redirectUri,
+    };
+};
 
 export function useShv(options: VueShvOptions) {
     const shvLocalStorage = useLocalStorage<ShvLocalStorage>('vue-shv', {});
@@ -178,22 +179,38 @@ export function useShv(options: VueShvOptions) {
         state.ws = createZodWsClient({
             logDebug: debug,
             wsUri: await resolveString(options.wsUri),
-            onWorkflows(workflows) {
+            async onWorkflows(workflows) {
                 if (!Array.isArray(workflows)) {
                     noBrokerSupport();
                     return;
                 }
 
+                let parsedAzureWorkflow: z.infer<typeof OAuth2AzureWorkflowZod> | undefined;
                 for (const workflow of workflows) {
                     const parsedWorkflow = OAuth2AzureWorkflowZod.safeParse(workflow);
                     if (parsedWorkflow.success) {
-                        shvSessionStorage.value.azureWorkflow = parsedWorkflow.data;
-                        globalThis.location.replace(makePkce({...parsedWorkflow.data, azureCodeRedirect}).authorizeUrl());
-                        return;
+                        parsedAzureWorkflow = parsedWorkflow.data;
+                        break;
                     }
                 }
 
-                noBrokerSupport();
+                if (parsedAzureWorkflow === undefined) {
+                    noBrokerSupport();
+                    return;
+                }
+
+                shvSessionStorage.value.azureWorkflow = parsedAzureWorkflow;
+                const codeVerifier = await generateCodeVerifier();
+                const oauthState = crypto.randomUUID();
+                const oauth = makeOAuthClient({...parsedAzureWorkflow, azureCodeRedirect});
+                shvSessionStorage.value.azureCodeVerifier = codeVerifier;
+                shvSessionStorage.value.azureState = oauthState;
+                globalThis.location.replace(await oauth.client.authorizationCode.getAuthorizeUri({
+                    redirectUri: oauth.redirectUri,
+                    codeVerifier,
+                    scope: Array.isArray(parsedAzureWorkflow.scopes) ? parsedAzureWorkflow.scopes : [parsedAzureWorkflow.scopes],
+                    state: oauthState,
+                }));
             },
             onWorkflowsFailed() {
                 noBrokerSupport();
@@ -491,17 +508,26 @@ export function useShv(options: VueShvOptions) {
 
         const {azureCodeRedirect} = options;
 
-        return makePkce({...shvSessionStorage.value.azureWorkflow, azureCodeRedirect}).exchangeForAccessToken(globalThis.location.href).then(resp => {
+        const codeVerifier = shvSessionStorage.value.azureCodeVerifier;
+        const oauthState = shvSessionStorage.value.azureState;
+        if (codeVerifier === undefined || oauthState === undefined) {
+            azureHandlerError.value = 'Couldn\'t authenticate to Azure: no active PKCE login procedure';
+            return;
+        }
+
+        const oauth = makeOAuthClient({...shvSessionStorage.value.azureWorkflow, azureCodeRedirect});
+        return oauth.client.authorizationCode.getTokenFromCodeRedirect(globalThis.location.href, {
+            redirectUri: oauth.redirectUri,
+            codeVerifier,
+            state: oauthState,
+        }).then(resp => {
             shvSessionStorage.value.azureWorkflow = undefined;
-            const token = resp.access_token;
-            if (token === undefined) {
-                azureHandlerError.value = 'Couldn\'t authenticate to Azure: unable to exchange access token';
-                return;
-            }
+            shvSessionStorage.value.azureCodeVerifier = undefined;
+            shvSessionStorage.value.azureState = undefined;
 
             // Store the token and remove the code from the query params.
             shvLogout();
-            shvLocalStorage.value.azureAccessToken = token;
+            shvLocalStorage.value.azureAccessToken = resp.accessToken;
             const redirectTo = shvLocalStorage.value.azureRedirectTo;
             if (redirectTo === undefined) {
                 azureHandlerError.value = 'Couldn\'t authenticate to Azure: no redirect URL';
