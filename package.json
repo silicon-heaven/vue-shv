@@ -1,6 +1,6 @@
 {
   "name": "vue-shv",
-  "version": "10.0.1",
+  "version": "11.0.0",
   "description": "Vue support for libshv-js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,8 +32,8 @@
     "@badgateway/oauth2-client": "^3.3.1"
   },
   "peerDependencies": {
-    "libshv-js": "^9.0.0",
-    "libshv-js-zod": "^6.0.0",
+    "libshv-js": "^10.0.0",
+    "libshv-js-zod": "^7.0.0",
     "vue": "^3.5.22"
   },
   "devDependencies": {
