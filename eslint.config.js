@@ -94,6 +94,7 @@ export default tseslint.config(
             "unicorn/no-useless-undefined": ["error", {
                 checkArguments: false
             }],
+            "unicorn/prefer-ternary": "off",
             "unicorn/prefer-top-level-await": "off",
             "unicorn/switch-case-braces": "off",
             "unicorn/prevent-abbreviations": "off",

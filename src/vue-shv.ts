@@ -343,13 +343,15 @@ export function useShv(options: VueShvOptions) {
                     },
                     onDisconnected() {
                         connected.value = 'disconnected';
-                        const RECONNECT_INTERVAL = 3000;
-                        if (shvLocalStorage.value.azureAccessToken !== undefined) {
-                            console.log('Disconnected from', wsUri, 'reconnecting in', RECONNECT_INTERVAL, 'ms');
-                            state.reconnectService = setTimeout(async () => {
-                                await getConnection();
-                            }, RECONNECT_INTERVAL);
+                        if (shvLocalStorage.value.azureAccessToken === undefined) {
+                            return;
                         }
+
+                        const RECONNECT_INTERVAL = 3000;
+                        console.log('Disconnected from', wsUri, 'reconnecting in', RECONNECT_INTERVAL, 'ms');
+                        state.reconnectService = setTimeout(async () => {
+                            await getConnection();
+                        }, RECONNECT_INTERVAL);
                     },
                     onRequest: options.onRequest,
                 });
