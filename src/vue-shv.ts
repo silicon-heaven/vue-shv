@@ -14,7 +14,7 @@ type GlobalResourceOptions<ResourceType> = {
     shvPath: StringGetter;
     method: string;
     validator: z.ZodType<ResourceType>;
-    signalName: string;
+    signalName: string | undefined;
     signalHandler: (param: RpcValue, resource: Ref<ResourceType | undefined>, reinit: () => void) => void;
     callRpcMethodOptions?: CallRpcMethodOptions;
 };
@@ -440,14 +440,16 @@ export function useShv(options: VueShvOptions) {
                     },
                 };
 
-                const connection = await getConnection();
-                await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', resourceOptions.signalName), (_path: string, _method: string, param: RpcValue) => {
-                    resourceOptions.signalHandler(param, resource, () => {
-                        refreshValue().catch((error: unknown) => {
-                            console.error(`Failed to initialize ${resIdentifier}`, error);
+                if (resourceOptions.signalName !== undefined) {
+                    const connection = await getConnection();
+                    await connection.subscribe(`Global-${resIdentifier}:`, ShvRI.fromPathMethodSignal(shvPath, '*', resourceOptions.signalName), (_path: string, _method: string, param: RpcValue) => {
+                        resourceOptions.signalHandler(param, resource, () => {
+                            refreshValue().catch((error: unknown) => {
+                                console.error(`Failed to initialize ${resIdentifier}`, error);
+                            });
                         });
                     });
-                });
+                }
             } catch (error) {
                 console.error(`Failed to initialize ${resIdentifier}`, error);
             }
