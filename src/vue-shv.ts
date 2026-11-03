@@ -26,20 +26,6 @@ type VueShvOptions = {
     mountPoint?: string;
 };
 
-type ShvLocalStorage = {
-    azureAccessToken?: string;
-    azureRedirectTo?: string;
-};
-
-type ShvSessionStorage = {
-    shvLoginUser?: string;
-    shvLoginPassword?: string;
-
-    azureWorkflow?: z.infer<typeof OAuth2AzureWorkflowZod>;
-    azureCodeVerifier?: string;
-    azureState?: string;
-};
-
 const OAuth2AzureWorkflowZod = z.map({
     type: z.literal('oauth2-azure'),
     authorizeUrl: z.string(),
@@ -56,11 +42,6 @@ export enum LoginFailureReason {
     CouldntLogin,
     LoggedOut,
 }
-
-type LoginFailure = {
-    reason: LoginFailureReason;
-    message?: string;
-};
 
 const makeOAuthClient = (oauthOptions: {azureCodeRedirect: string; clientId: string; authorizeUrl: string; tokenUrl: string}) => {
     const redirectUri = (() => {
@@ -81,6 +62,20 @@ const makeOAuthClient = (oauthOptions: {azureCodeRedirect: string; clientId: str
 };
 
 export function useShv(options: VueShvOptions) {
+    type ShvLocalStorage = {
+        azureAccessToken?: string;
+        azureRedirectTo?: string;
+    };
+
+    type ShvSessionStorage = {
+        shvLoginUser?: string;
+        shvLoginPassword?: string;
+
+        azureWorkflow?: z.infer<typeof OAuth2AzureWorkflowZod>;
+        azureCodeVerifier?: string;
+        azureState?: string;
+    };
+
     const shvLocalStorage = useLocalStorage<ShvLocalStorage>('vue-shv', {});
     const shvSessionStorage = useSessionStorage<ShvSessionStorage>('vue-shv', {});
 
@@ -281,6 +276,11 @@ export function useShv(options: VueShvOptions) {
         displayName.value = 'Logged out';
         displayPhoto.value = undefined;
         state.ws = undefined;
+    };
+
+    type LoginFailure = {
+        reason: LoginFailureReason;
+        message?: string;
     };
 
     const loginFailure = ref<LoginFailure>();
