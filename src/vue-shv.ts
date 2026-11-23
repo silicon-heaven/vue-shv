@@ -1,4 +1,10 @@
-import {computed, type ComputedRef, type Ref, ref, watchEffect} from 'vue';
+import {
+    computed,
+    type ComputedRef,
+    type Ref,
+    ref,
+    watchEffect,
+} from 'vue';
 import {type CallRpcMethodOptions, type WsClient, type WsClientOptionsLogin} from 'libshv-js/ws-client';
 import {useLocalStorage, useSessionStorage} from '@vueuse/core';
 import {generateCodeVerifier, OAuth2Client} from '@badgateway/oauth2-client';
@@ -219,6 +225,7 @@ export function useShv(options: VueShvOptions) {
         shvSessionStorage.value.shvLoginPassword = password;
     };
 
+    // eslint-disable-next-line unicorn/prefer-options-parameter -- We want optional params, and then we have explicitNullParam
     const rpcCall = async (shvPath: StringGetter, method: string, params?: RpcValue, rpcCallOptions?: CallRpcMethodOptions) => {
         const shv = await getConnection();
         return shv.callRpcMethod(await resolveString(shvPath), method, params, rpcCallOptions);
