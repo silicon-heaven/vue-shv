@@ -65,9 +65,6 @@ export default tseslint.config(
             ],
             "@typescript-eslint/triple-slash-reference": "off",
             "capitalized-comments": "off",
-            "@stylistic/object-curly-newline": ["error", {
-                "ImportDeclaration": "never"
-            }],
             "import-x/extensions": "off",
             "n/file-extension-in-import": "off",
             "promise-function-async": "off",
@@ -94,6 +91,7 @@ export default tseslint.config(
             "unicorn/no-useless-undefined": ["error", {
                 checkArguments: false
             }],
+            "unicorn/prefer-await": "off",
             "unicorn/prefer-ternary": "off",
             "unicorn/prefer-top-level-await": "off",
             "unicorn/switch-case-braces": "off",
